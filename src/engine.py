@@ -155,6 +155,7 @@ class TeqdimatDeck:
         self.movzu_adi = movzu_adi
         self.muellif = muellif
         self.slide_no = 0
+        self.font_scale = 1.0          # yazı ölçüsü çarpanı (Manual rejimdə seçilir)
 
     # ---------- TƏMƏL ----------
 
@@ -184,7 +185,7 @@ class TeqdimatDeck:
         for i, line in enumerate(text.split("\n")):
             p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
             p.text = line
-            p.font.size = Pt(size)
+            p.font.size = Pt(round(size * (self.font_scale if size < 26 else 1.0), 1))   # yalnız kiçik/orta mətn böyüyür, iri başlıqlar yox
             p.font.bold = bold
             p.font.color.rgb = color
             p.font.name = font
@@ -592,10 +593,10 @@ class TeqdimatDeck:
                          size=16, color=self.t["accent"])
         return slide
 
-    def teşekkur_slaydi(self, formula=""):
+    def teşekkur_slaydi(self, formula="", baslik=None):
         slide = self.new_slide(footer=False)
         self.divider(slide, Inches(1.0))
-        self.textbox(slide, "TƏŞƏKKÜR EDİRİK", Inches(0.6), Inches(2.8), Inches(12.1),
+        self.textbox(slide, baslik or "TƏŞƏKKÜR EDİRİK", Inches(0.6), Inches(2.8), Inches(12.1),
                      Inches(1), size=38, bold=True, color=self.t["text_main"],
                      align=PP_ALIGN.CENTER, font=self.t["font_head"])
         self.textbox(slide, "Diqqətinizə görə təşəkkür edirik.", Inches(0.6), Inches(3.7),

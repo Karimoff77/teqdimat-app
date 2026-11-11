@@ -3,7 +3,7 @@ APP.PY — Manual rejim (Streamlit). Məqsəd: testerlərə verilə bilən ilk i
 İşə sal:  streamlit run app.py
 Test üçün rəy linki (istəyə bağlı):  FEEDBACK_URL=https://... streamlit run app.py
 """
-import hashlib, json, os, re, sys, time
+import colorsys, hashlib, json, os, re, sys, time
 import pandas as pd
 import streamlit as st
 
@@ -24,7 +24,19 @@ def _rey_linki():
 FEEDBACK_URL = _rey_linki()
 LOG = os.path.join(ROOT, "logs", "istifade.jsonl")
 
-st.set_page_config(page_title="Təqdimat — Manual rejim", page_icon="🧩", layout="wide")
+st.set_page_config(page_title="Təqdimat — Manual rejim", page_icon="🧩", layout="wide", initial_sidebar_state="collapsed")
+
+YAZI = {"Standart": 1.0, "Böyük": 1.15, "Çox böyük": 1.3}       # yazı ölçüsü çarpanı
+
+
+def tema_emoji(t):
+    """Temanın əsas rənginə uyğun dairə (seçim düymələrində rəngi göstərir)."""
+    r, g, b = [c / 255 for c in engine.THEMES[t]["accent"]]
+    h, l, sat = colorsys.rgb_to_hls(r, g, b)
+    if sat < 0.15:
+        return "⚫" if l < 0.5 else "⚪"
+    h *= 360
+    return "🔴" if (h < 20 or h >= 345) else "🟠" if h < 45 else "🟡" if h < 70 else "🟢" if h < 170 else "🔵" if h < 260 else "🟣"
 
 
 # ------------------------------------------------------------------ köməkçilər
@@ -79,7 +91,7 @@ if "slaydlar" not in st.session_state:
     st.session_state.cixis = None
 
 S = st.session_state.slaydlar
-for _k, _v in (("movzu", "Təqdimatın mövzusu"), ("muellif", ""), ("tema", "auto"), ("qarisiq", False)):
+for _k, _v in (("movzu", "Təqdimatın mövzusu"), ("muellif", ""), ("tema", "auto"), ("qarisiq", False), ("yazi", "Standart"), ("kat_sec", "giris")):
     st.session_state.setdefault(_k, _v)
 
 
@@ -135,62 +147,64 @@ def cb_yukle():
         st.session_state["tema"] = ay["tema"]
     if isinstance(ay.get("qarisiq"), bool):
         st.session_state["qarisiq"] = ay["qarisiq"]
+    _yz = [k for k, v in YAZI.items() if v == ay.get("yazi")]
+    if _yz:
+        st.session_state["yazi"] = _yz[0]
     st.session_state.cixis = None
     st.session_state.acik = None
     st.session_state.yukle_mesaj = ("success", f"Yükləndi: {len(recs)} slayd" + (f" ({atilan} slayd oxunmadı)" if atilan else ""))
 
 
-# ------------------------------------------------------------------ yan panel: ayarlar
-with st.sidebar:
-    st.header("Təqdimat ayarları")
-    movzu = st.text_input("Mövzu (hər slaydın altında görünür)", key="movzu")
-    muellif = st.text_input("Fənn / müəllif (istəyə bağlı)", key="muellif")
-    temalar = ["auto"] + sorted(engine.THEMES)
-    tema = st.selectbox("Rəng teması", temalar, key="tema", format_func=lambda t: "Təsadüfi" if t == "auto" else t.capitalize())
-    if tema != "auto":
-        img(os.path.join(ROOT, "assets", "tema", f"{tema}.png"))
-    qarisiq = st.checkbox("Üslubu qarışdır (künc, başlıq, dekor)", key="qarisiq",
-                          help="Söndürülüdürsə, temanın öz üslubu işləyir. Qarışdıranda hər təqdimat başqa görünür.")
-    st.divider()
-    st.subheader("Layihə")
-    ad_layihe = re.sub(r"[^\w\-]+", "_", movzu.strip(), flags=re.UNICODE).strip("_")[:40] or "layihe"
-    st.download_button("💾 Layihəni saxla (.json)",
-                       manual.layihe_json(S, {"movzu": movzu, "muellif": muellif, "tema": tema, "qarisiq": qarisiq}),
-                       file_name=f"{ad_layihe}.json", mime="application/json",
-                       help="Sonra davam etmək üçün. Brauzeri bağlayanda iş itir, bu fayl isə qalır.")
-    st.file_uploader("Saxlanmış layihəni yüklə", type=["json"], key="yukle", on_change=cb_yukle)
-    _m = st.session_state.pop("yukle_mesaj", None)
-    if _m:
-        (st.error if _m[0] == "error" else st.success)(_m[1])
-
 # ------------------------------------------------------------------ başlıq
 st.title("🧩 Təqdimat hazırla")
-st.caption("Slaydları kateqoriya üzrə seç, məzmunu yaz, hazır `.pptx` faylını yüklə. Fayl PowerPoint-də tam redaktə olunur.")
+st.caption("Slaydları seç, məzmunu yaz, hazır `.pptx` faylını yüklə. Fayl PowerPoint-də tam redaktə olunur.")
 
+# ------------------------------------------------------------------ 1. ayarlar
+with st.container(border=True):
+    st.markdown("### 1. Təqdimatın ayarları")
+    c1, c2 = st.columns(2)
+    movzu = c1.text_input("Mövzu (hər slaydın altında görünür)", key="movzu")
+    muellif = c2.text_input("Fənn / müəllif (istəyə bağlı)", key="muellif")
+    temalar = ["auto"] + sorted(engine.THEMES)
+    tema = st.pills("Rəng teması", temalar, key="tema", selection_mode="single",
+                    format_func=lambda t: "🎲 Təsadüfi" if t == "auto" else f"{tema_emoji(t)} {t.capitalize()}") or "auto"
+    if tema != "auto":
+        img(os.path.join(ROOT, "assets", "tema", f"{tema}.png"), width=340)
+    c3, c4 = st.columns(2)
+    yazi_ad = c3.pills("Yazı ölçüsü", list(YAZI), key="yazi", selection_mode="single") or "Standart"
+    qarisiq = c4.checkbox("Üslubu qarışdır (künc, başlıq, dekor)", key="qarisiq",
+                          help="Söndürülüdürsə, temanın öz üslubu işləyir. Qarışdıranda hər təqdimat başqa görünür.")
+
+# ------------------------------------------------------------------ 2. yeni slayd
 sol, sag = st.columns([2, 3], gap="large")
-
-# ------------------------------------------------------------------ sol: yeni slayd
 with sol:
-    st.subheader("➕ Yeni slayd")
+    st.markdown("### 2. Slayd əlavə et")
     kats = kataloq.KATEQORIYALAR
-    kat = st.selectbox("Kateqoriya", kats, format_func=lambda k: k["ad"])
+    ids = [k["id"] for k in kats]
+    sec = st.pills("Slayd növü", ids, key="kat_sec", selection_mode="single",
+                   format_func=lambda i: f"{kataloq.ikon(i)} {manual.kat_tap(i)['ad']}")
+    kat = manual.kat_tap(sec or st.session_state.get("kat_son") or ids[0])
+    st.session_state["kat_son"] = kat["id"]
     st.caption(kat["izah"])
     if len(kat["altlar"]) > 1:
-        alt = st.selectbox("Növ", kat["altlar"], format_func=lambda a: a["ad"])
+        alt_tip = st.pills("Növ", [a["tip"] for a in kat["altlar"]], key=f"alt_{kat['id']}", selection_mode="single",
+                           default=kat["altlar"][0]["tip"], format_func=lambda t, k=kat: next(a["ad"] for a in k["altlar"] if a["tip"] == t))
+        alt = next((a for a in kat["altlar"] if a["tip"] == alt_tip), kat["altlar"][0])
     else:
         alt = kat["altlar"][0]
     variants = alt["variantlar"]
     if len(variants) > 1:
-        v = st.radio("Düzülüş", variants, format_func=lambda x: kataloq.variant_ad(alt["tip"], x), horizontal=True)
+        v = st.pills("Düzülüş", variants, key=f"var_{kat['id']}_{alt['tip']}", selection_mode="single", default=variants[0],
+                     format_func=lambda x, t=alt["tip"]: kataloq.variant_ad(t, x)) or variants[0]
     else:
         v = variants[0]
     img(os.path.join(ROOT, "assets", "variant", f"{alt['tip']}_{v}.png"))
     st.caption("Nümunə görünüş. Rəng seçdiyin temaya görə dəyişəcək.")
-    st.button("Slayd əlavə et", type="primary", on_click=cb_elave, args=(kat["id"], alt["tip"], v), use_container_width=True)
+    st.button("➕ Slayd əlavə et", type="primary", on_click=cb_elave, args=(kat["id"], alt["tip"], v), use_container_width=True)
 
-# ------------------------------------------------------------------ sağ: slayd siyahısı
+# ------------------------------------------------------------------ 3. slaydlar
 with sag:
-    st.subheader(f"📑 Təqdimat ({len(S)} slayd)")
+    st.markdown(f"### 3. Slaydların ({len(S)})")
     if not S:
         st.info("Hələ slayd yoxdur. Soldan əlavə et.")
     for i, rec in enumerate(S):
@@ -259,7 +273,7 @@ with sag:
 
 # ------------------------------------------------------------------ yarat və yüklə
 st.divider()
-spec = manual.spec_qur(S, tema, movzu, muellif, qarisiq, seed=movzu)
+spec = manual.spec_qur(S, tema, movzu, muellif, qarisiq, seed=movzu, yazi=YAZI[yazi_ad])
 h = hashlib.md5(json.dumps(spec, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
 n_nun = sum(manual.numunedir(r) for r in S)
 
@@ -290,7 +304,7 @@ if cx:
                        on_click=log_hadise,
                        args=({"slayd": cx["n"], "kateqoriyalar": [r["kat"] for r in S], "tema": tema,
                               "temir": len(cx["rep"]), "numune_qalan": n_nun, "qarisiq": qarisiq,
-                              "onizleme": bool(cx["png"])},))
+                              "onizleme": bool(cx["png"]), "yazi": yazi_ad},))
     if cx["rep"]:
         with st.expander(f"{len(cx['rep'])} avtomatik düzəliş edildi (uzun mətn və s.)"):
             for r in cx["rep"]:
@@ -310,3 +324,16 @@ if cx:
         st.info("Bu versiyada slayd önizləməsi yoxdur. Fayl hazırdır: yüklə və PowerPoint-də aç, orada redaktə edə bilərsən.")
     if FEEDBACK_URL:
         st.link_button("2 dəqiqəlik rəy ver", FEEDBACK_URL)
+
+# ------------------------------------------------------------------ layihəni saxla / yüklə
+st.divider()
+with st.expander("💾 Layihəni saxla / yüklə (sonra davam etmək üçün)"):
+    ad_layihe = re.sub(r"[^\w\-]+", "_", movzu.strip(), flags=re.UNICODE).strip("_")[:40] or "layihe"
+    st.download_button("💾 Layihəni saxla (.json)",
+                       manual.layihe_json(S, {"movzu": movzu, "muellif": muellif, "tema": tema, "qarisiq": qarisiq, "yazi": YAZI[yazi_ad]}),
+                       file_name=f"{ad_layihe}.json", mime="application/json",
+                       help="Brauzeri bağlayanda iş itir, bu fayl isə qalır.")
+    st.file_uploader("Saxlanmış layihəni yüklə", type=["json"], key="yukle", on_change=cb_yukle)
+    _m = st.session_state.pop("yukle_mesaj", None)
+    if _m:
+        (st.error if _m[0] == "error" else st.success)(_m[1])

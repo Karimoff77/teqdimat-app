@@ -20,7 +20,7 @@ VARIANTS = {
     "statistika": ["plain", "cards"],
     "sekilli":    ["right", "left", "top"],
     "plan":       ["list", "cards", "line"],
-    "tesekkur":   ["center", "split", "question"],
+    "tesekkur":   ["center", "split", "question", "minimal"],
     "cedvel":     ["table", "cards"],
 }
 
@@ -282,10 +282,18 @@ def plan(d, s, v, chk):
 # ============================================================ TƏŞƏKKÜR
 def tesekkur(d, s, v, chk):
     t = d.t; f = s.get("alt", ""); W, H = d.prs.slide_width, d.prs.slide_height
+    bas = (s.get("baslik") or "").strip()          # istifadəçi başlığı (boşdursa standart mətn)
     sl = d.new_slide(footer=False)
+    if v == "minimal":                             # sakit: kiçik başlıq, nazik xətt, çoxlu boş yer
+        d.textbox(sl, bas or "Təşəkkür edirik", Inches(1.0), Inches(2.9), W - Inches(2.0), Inches(1.0), size=34, bold=True,
+                  color=t["text_main"], font=t["font_head"])
+        box(sl, MSO_SHAPE.RECTANGLE, Inches(1.0), Inches(4.0), Inches(0.9), Inches(0.06), fill=t["accent"])
+        if f:
+            d.textbox(sl, f, Inches(1.0), Inches(4.3), W - Inches(2.0), Inches(0.6), size=16, color=t["text_body"])
+        return sl
     if v == "split":
         box(sl, MSO_SHAPE.RECTANGLE, 0, 0, Inches(5.4), H, fill=t["accent"])
-        d.textbox(sl, "TƏŞƏKKÜR\nEDİRİK", Inches(0.6), Inches(2.5), Inches(4.4), Inches(2.2), size=40, bold=True,
+        d.textbox(sl, (bas.upper() if bas else "TƏŞƏKKÜR\nEDİRİK"), Inches(0.6), Inches(2.5), Inches(4.4), Inches(2.2), size=40, bold=True,
                   color=on(t["accent"]), font=t["font_head"])
         d.textbox(sl, "Diqqətinizə görə təşəkkür edirik.", Inches(6.2), Inches(2.4), Inches(6.5), Inches(0.9), size=24,
                   color=t["text_main"])
@@ -296,7 +304,7 @@ def tesekkur(d, s, v, chk):
         d.textbox(sl, "Suallarınızı gözləyirəm.", Inches(6.2), Inches(5.1), Inches(6.5), Inches(0.5), size=15,
                   color=t["text_body"])
     else:  # question
-        d.textbox(sl, "Suallarınız?", Inches(0.8), Inches(2.2), W - Inches(1.6), Inches(1.6), size=56, bold=True,
+        d.textbox(sl, bas or "Suallarınız?", Inches(0.8), Inches(2.2), W - Inches(1.6), Inches(1.6), size=56, bold=True,
                   color=t["text_main"], align=C, font=t["font_head"])
         box(sl, MSO_SHAPE.RECTANGLE, int((W - Inches(1.4)) / 2), Inches(4.0), Inches(1.4), Inches(0.07), fill=t["accent"])
         d.textbox(sl, "Diqqətinizə görə təşəkkür edirik", Inches(0.8), Inches(4.3), W - Inches(1.6), Inches(0.6), size=20,

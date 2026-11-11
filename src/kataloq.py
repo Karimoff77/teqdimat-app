@@ -68,8 +68,10 @@ KATEQORIYALAR = [
          {"tip": "statistika", "ad": "Böyük rəqəmlər", "variantlar": _v("statistika"),
           "sahələr": [KICKER, BASLIK, {"ad": "rəqəmlər", "etiket": "Rəqəm + izah (3 rəqəmdə rəqəm ≤6 simvol)", "növ": "cütlər", "max": (6, 60), "say": 4, "sütunlar": ("Rəqəm", "İzah")}],
           "nümunə": {"tip": "statistika", "kicker": "RƏQƏMLƏRLƏ", "baslik": "Əsas göstəricilər (nümunə)",
-                     "rəqəmlər": [["45%", "Nümunə göstərici: birinci faiz"], ["1:3", "Nümunə nisbət: ikinci göstərici"], ["2026", "Nümunə il: üçüncü göstərici"]]}},
-         {"tip": "qrafik", "ad": "Qrafik (redaktə olunan)", "variantlar": ["xett", "sutun"], "variant_sahəsi": "novu",
+                     "rəqəmlər": [["45%", "Nümunə göstərici: birinci faiz"], ["1:3", "Nümunə nisbət: ikinci göstərici"], ["2026", "Nümunə il: üçüncü göstərici"]]}}]},
+    {"id": "qrafik", "ad": "Qrafik / diaqram", "ikon": "📈", "mərhələ": 1, "izah": "Xətt və ya sütun diaqramı (redaktə olunan, PowerPoint-də də dəyişir)",
+     "altlar": [
+{"tip": "qrafik", "ad": "Qrafik / diaqram", "variantlar": ["xett", "sutun"], "variant_sahəsi": "novu",
           "sahələr": [KICKER, BASLIK, L("kateqoriyalar", "X oxu dəyərləri", 20, 10),
                       {"ad": "setirler", "etiket": "Seriyalar (ad + rəqəmlər, ≤3 seriya)", "növ": "seriyalar", "max": 24, "say": 3},
                       S("x_oxu", "X oxu adı", 24, True), S("y_oxu", "Y oxu adı", 24, True),
@@ -112,13 +114,8 @@ KATEQORIYALAR = [
                     "meqamlar": ["Şəkildə əsas hissə qeyd olunur", "İkinci hissənin vəzifəsi izah edilir", "Ümumi işləmə qaydası göstərilir"],
                     "sekil_axtaris": "example diagram"}}]},
     # ------------------------------------------------------------ 8
-    {"id": "sonluq", "ad": "Sonluq", "mərhələ": 1, "izah": "Yekun slaydı: təşəkkür və ya suallar",
-     "altlar": [{
-         "tip": "tesekkur", "ad": "Təşəkkür / suallar", "variantlar": _v("tesekkur"),
-         "sahələr": [S("alt", "Yekun cümlə", 60, True)],
-         "nümunə": {"tip": "tesekkur", "alt": "Fənn adı • Mövzunun adı"}}]},
     # ------------------------------------------------------------ əlavələr (mənim təklifim)
-    {"id": "proses", "ad": "Addımlar", "mərhələ": 1, "izah": "Ardıcıl proses: necə edilir, necə işləyir (3–4 addım)",
+    {"id": "proses", "ad": "Addımlar / iş prinsipi", "mərhələ": 1, "izah": "Proses, iş prinsipi, metodologiya: addım-addım (3–4 addım)",
      "altlar": [{
          "tip": "proses", "ad": "Addım-addım proses", "variantlar": _v("proses"),
          "sahələr": [KICKER, BASLIK, P("addimlar", "Addımlar (başlıq + izah)", (36, 90), 4, ("Addım", "İzah")), S("netice", "Qısa yekun xətt", 70, True)],
@@ -134,6 +131,11 @@ KATEQORIYALAR = [
          "nümunə": {"tip": "formula", "kicker": "DÜSTUR", "baslik": "Düz xəttin ümumi tənliyi",
                     "formula": "ax + by + c = 0",
                     "aciqlamalar": [["a, b", "x və y-in əmsalları"], ["c", "sərbəst hədd"], ["x, y", "dəyişənlər"]]}}]},
+    {"id": "sonluq", "ad": "Sonluq", "mərhələ": 1, "izah": "Yekun slaydı: təşəkkür və ya suallar",
+     "altlar": [{
+         "tip": "tesekkur", "ad": "Təşəkkür / suallar", "variantlar": ["minimal", "center", "split", "question"],
+         "sahələr": [S("baslik", "Başlıq (boş qalsa standart mətn)", 24, True), S("alt", "Alt yazı", 60, True)],
+         "nümunə": {"tip": "tesekkur", "baslik": "Təşəkkür edirik", "alt": "Fənn adı • Mövzunun adı"}}]},
     # ------------------------------------------------------------ mərhələ 2 (kod hazırdır, ikinci sıra)
     {"id": "xronologiya", "ad": "Xronologiya", "mərhələ": 2, "izah": "Tarixi və ya mərhələli inkişaf (tək düzülüş)",
      "altlar": [{
@@ -186,3 +188,13 @@ VARIANT_AD_TIP = {("sekilli", "right"): "Şəkil sağda", ("sekilli", "left"): "
 
 def variant_ad(tip, v):
     return VARIANT_AD_TIP.get((tip, v)) or VARIANT_AD.get(v, v)
+
+
+# ---- Sonluq həmişə siyahının sonunda; ikonlar (seçim düymələri üçün)
+KATEQORIYALAR.sort(key=lambda k: k["id"] == "sonluq")
+IKON = {"giris": "🎬", "plan": "📋", "muqayise": "⚖️", "statistika": "🔢", "qrafik": "📈", "metn": "📝", "cedvel": "🗂️",
+        "sekilli": "🖼️", "proses": "🪜", "dustur": "➗", "xronologiya": "🕰️", "esas_fikir": "💡", "sonluq": "🏁"}
+
+
+def ikon(kid):
+    return IKON.get(kid, "▫️")

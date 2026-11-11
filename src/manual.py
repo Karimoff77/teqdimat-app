@@ -72,8 +72,8 @@ def xeberdarliqlar(rec):
     return out
 
 
-def spec_qur(recs, tema="corporate", movzu="Təqdimat", muellif="", qarisiq=False, seed=""):
-    return {"tema": tema, "movzu": movzu or "Təqdimat", "muellif": muellif, "seed": seed or movzu or "t",
+def spec_qur(recs, tema="corporate", movzu="Təqdimat", muellif="", qarisiq=False, seed="", yazi=1.0):
+    return {"yazi": yazi, "tema": tema, "movzu": movzu or "Təqdimat", "muellif": muellif, "seed": seed or movzu or "t",
             "stil": "auto" if qarisiq else "tema", "slaydlar": [slayd_json(r) for r in recs]}
 
 
@@ -133,12 +133,17 @@ def layihe_yukle(metn):
     recs, atilan = [], 0
     for s in o["slaydlar"][:MAX_SLAYD_MANUAL]:
         try:
-            alt = alt_tap(s["kat"], s["tip"])
+            kid = s["kat"]
+            try:
+                alt = alt_tap(kid, s["tip"])
+            except StopIteration:                     # köhnə fayl: kateqoriya adı dəyişib (məs. qrafik Statistika-dan ayrıldı)
+                kid = next(k["id"] for k in kataloq.KATEQORIYALAR for a in k["altlar"] if a["tip"] == s["tip"])
+                alt = alt_tap(kid, s["tip"])
         except (StopIteration, KeyError, TypeError):
             atilan += 1
             continue
         v = s.get("variant") if s.get("variant") in alt["variantlar"] else alt["variantlar"][0]
-        recs.append({"id": next(_ids), "kat": s["kat"], "tip": s["tip"], "variant": v, "data": sanitize(s["kat"], s["tip"], s.get("data"))})
+        recs.append({"id": next(_ids), "kat": kid, "tip": s["tip"], "variant": v, "data": sanitize(kid, s["tip"], s.get("data"))})
     atilan += max(0, len(o["slaydlar"]) - MAX_SLAYD_MANUAL)
     if not recs:
         raise ValueError("faylda oxuna bilən slayd yoxdur")

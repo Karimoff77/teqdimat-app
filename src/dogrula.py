@@ -174,6 +174,7 @@ def fix_slide(s, i, log):
         s["x_oxu"] = cut(s.get("x_oxu"), 24, log, yer); s["y_oxu"] = cut(s.get("y_oxu"), 24, log, yer)
     elif t == "tesekkur":
         s["alt"] = cut(s.get("alt"), 60, log, yer)
+        s["baslik"] = cut(s.get("baslik"), 24, log, yer)
     else:
         log.append(f"{yer}: naməlum tip → maddələr slaydına çevrildi")
         txt = [_s(v) for k, v in s.items() if k not in ("tip", "kicker", "baslik") and isinstance(v, (str, list))]

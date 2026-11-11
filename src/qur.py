@@ -100,6 +100,10 @@ def build(spec):
                     radius=_r.choice([0.0, 0.04, 0.1, 0.18, 0.25]),
                     header=_r.choice(["plain", "tick", "band", "pill"]),
                     titul=_r.choice(["left", "center", "band"]))
+    try:
+        d.font_scale = max(0.9, min(1.4, float(spec.get("yazi", 1.0) or 1.0)))
+    except (TypeError, ValueError):
+        d.font_scale = 1.0
     rng = random.Random(str(spec.get("seed", spec["movzu"])))
     last = {}
     def pick(tip, s):
@@ -170,7 +174,7 @@ def build(spec):
         elif t == "sekilli":
             duzulus.sekilli(d, s, "right", lambda yer, m, mx, st=False, _c=ctx: chk(_c + "." + yer, m, mx, st))
         elif t == "tesekkur":
-            d.teşekkur_slaydi(s.get("alt", ""))
+            d.teşekkur_slaydi(s.get("alt", ""), (s.get("baslik") or "").strip() or None)
         else:
             WARN.append(f"{ctx}: naməlum slayd tipi")
     return d
