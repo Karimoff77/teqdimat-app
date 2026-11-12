@@ -166,12 +166,12 @@ with st.container(border=True):
     movzu = c1.text_input("Mövzu (hər slaydın altında görünür)", key="movzu")
     muellif = c2.text_input("Fənn / müəllif (istəyə bağlı)", key="muellif")
     temalar = ["auto"] + sorted(engine.THEMES)
-    tema = st.pills("Rəng teması", temalar, key="tema", selection_mode="single",
+    tema = st.pills("Rəng teması", temalar, key="tema", selection_mode="single", wrap=True,
                     format_func=lambda t: "🎲 Təsadüfi" if t == "auto" else f"{tema_emoji(t)} {t.capitalize()}") or "auto"
     if tema != "auto":
         img(os.path.join(ROOT, "assets", "tema", f"{tema}.png"), width=340)
     c3, c4 = st.columns(2)
-    yazi_ad = c3.pills("Yazı ölçüsü", list(YAZI), key="yazi", selection_mode="single") or "Standart"
+    yazi_ad = c3.pills("Yazı ölçüsü", list(YAZI), key="yazi", selection_mode="single", wrap=True) or "Standart"
     qarisiq = c4.checkbox("Üslubu qarışdır (künc, başlıq, dekor)", key="qarisiq",
                           help="Söndürülüdürsə, temanın öz üslubu işləyir. Qarışdıranda hər təqdimat başqa görünür.")
 
@@ -181,20 +181,20 @@ with sol:
     st.markdown("### 2. Slayd əlavə et")
     kats = kataloq.KATEQORIYALAR
     ids = [k["id"] for k in kats]
-    sec = st.pills("Slayd növü", ids, key="kat_sec", selection_mode="single",
+    sec = st.pills("Slayd növü", ids, key="kat_sec", selection_mode="single", wrap=True,
                    format_func=lambda i: f"{kataloq.ikon(i)} {manual.kat_tap(i)['ad']}")
     kat = manual.kat_tap(sec or st.session_state.get("kat_son") or ids[0])
     st.session_state["kat_son"] = kat["id"]
     st.caption(kat["izah"])
     if len(kat["altlar"]) > 1:
-        alt_tip = st.pills("Növ", [a["tip"] for a in kat["altlar"]], key=f"alt_{kat['id']}", selection_mode="single",
+        alt_tip = st.pills("Növ", [a["tip"] for a in kat["altlar"]], key=f"alt_{kat['id']}", selection_mode="single", wrap=True,
                            default=kat["altlar"][0]["tip"], format_func=lambda t, k=kat: next(a["ad"] for a in k["altlar"] if a["tip"] == t))
         alt = next((a for a in kat["altlar"] if a["tip"] == alt_tip), kat["altlar"][0])
     else:
         alt = kat["altlar"][0]
     variants = alt["variantlar"]
     if len(variants) > 1:
-        v = st.pills("Düzülüş", variants, key=f"var_{kat['id']}_{alt['tip']}", selection_mode="single", default=variants[0],
+        v = st.pills("Düzülüş", variants, key=f"var_{kat['id']}_{alt['tip']}", selection_mode="single", wrap=True, default=variants[0],
                      format_func=lambda x, t=alt["tip"]: kataloq.variant_ad(t, x)) or variants[0]
     else:
         v = variants[0]
