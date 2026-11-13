@@ -35,7 +35,7 @@ KATEQORIYALAR = [
     {"id": "giris", "ad": "Giriş", "mərhələ": 1, "izah": "Açılış (titul) slaydı: mövzu, müəllif, tarix",
      "altlar": [{
          "tip": "titul", "ad": "Titul slaydı", "variantlar": ["left", "center", "band"], "variant_sahəsi": "stil_titul",
-         "sahələr": [S("kicker", "Üst etiket", 40), S("baslik", "Başlıq (2 sətrə qədər, \\n ilə)", 33),
+         "sahələr": [S("kicker", "Üst etiket", 40), {**S("baslik", "Başlıq (ən çox 2 sətir; Enter ilə ikinci sətrə keç)", 33), "çoxsətir": True},
                      S("alt_baslik", "Alt başlıq", 110), L("info", "Məlumat sətirləri (fənn, müəllim, qrup)", 60, 3, True),
                      S("tarix_yer", "Tarix • yer", 40, True)],
          "nümunə": {"tip": "titul", "kicker": "FƏNN ADI • TƏQDİMAT",
