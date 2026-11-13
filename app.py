@@ -87,7 +87,7 @@ def lbl(f):
 # ------------------------------------------------------------------ vəziyyət
 if "slaydlar" not in st.session_state:
     st.session_state.slaydlar = [manual.yeni("giris", "titul"), manual.yeni("sonluq", "tesekkur")]
-    st.session_state.acik = None
+    st.session_state.acik_set = set()
     st.session_state.cixis = None
 
 S = st.session_state.slaydlar
@@ -99,8 +99,25 @@ def _idx(sid):
     return next(i for i, r in enumerate(S) if r["id"] == sid)
 
 
+def _unut(sid):
+    """Slayd bağlananda/silinəndə cədvəl redaktorlarının başlanğıc şəkli təmizlənir: açılanda cari məzmundan yenidən qurulur."""
+    for k in [k for k in st.session_state if str(k).startswith(f"init:{sid}:")]:
+        del st.session_state[k]
+
+
+def cb_toggle(sid):
+    a = st.session_state.acik_set
+    if sid in a:
+        a.discard(sid)
+        _unut(sid)
+    else:
+        a.add(sid)
+
+
 def cb_sil(sid):
     del S[_idx(sid)]
+    st.session_state.acik_set.discard(sid)
+    _unut(sid)
 
 
 def cb_yuxari(sid):
@@ -122,7 +139,32 @@ def cb_elave(kid, tip, variant):
         S.insert(len(S) - 1, rec)
     else:
         S.append(rec)
-    st.session_state.acik = rec["id"]
+    st.session_state.acik_set.add(rec["id"])
+
+
+def cb_variant(sid):
+    """Düzülüş çipi dəyişəndə: dərhal slaydın qeydinə yazılır (başlıq və şəkil eyni dəqiqədə yenilənir)."""
+    rec = st.session_state.slaydlar[_idx(sid)]
+    v = st.session_state.get(f"var{sid}")
+    if v in manual.alt_tap(rec["kat"], rec["tip"])["variantlar"]:
+        rec["variant"] = v
+    else:                                   # çip söndürülübsə əvvəlki seçim qalsın
+        st.session_state[f"var{sid}"] = rec["variant"]
+
+
+def cb_dlg(delta):
+    n = len(st.session_state.cixis["png"])
+    st.session_state.dlg_i = (st.session_state.dlg_i + delta) % n
+
+
+@st.dialog("Slayd önizləməsi", width="large")
+def boyut():
+    cx = st.session_state.cixis
+    i = st.session_state.dlg_i
+    st.image(cx["png"][i], caption=f"{cx['adlar'][i]}  ({i + 1}/{len(cx['png'])})")
+    a, b = st.columns(2)
+    a.button("◀ Əvvəlki", key="dlg_prev", on_click=cb_dlg, args=(-1,), use_container_width=True)
+    b.button("Növbəti ▶", key="dlg_next", on_click=cb_dlg, args=(1,), use_container_width=True)
 
 
 def cb_yukle():
@@ -151,11 +193,15 @@ def cb_yukle():
     if _yz:
         st.session_state["yazi"] = _yz[0]
     st.session_state.cixis = None
-    st.session_state.acik = None
+    st.session_state.acik_set = set()
     st.session_state.yukle_mesaj = ("success", f"Yükləndi: {len(recs)} slayd" + (f" ({atilan} slayd oxunmadı)" if atilan else ""))
 
 
 # ------------------------------------------------------------------ başlıq
+st.markdown("""<style>
+/* şəkillərin üstündəki kiçik «tam ekran» düyməsi lazım deyil: böyütmək üçün «🔍 Böyüt» düyməsi var */
+[data-testid="stElementContainer"]:has([data-testid="stImage"]) [data-testid="stElementToolbar"] { display: none !important; }
+</style>""", unsafe_allow_html=True)
 st.title("🧩 Təqdimat hazırla")
 st.caption("Slaydları seç, məzmunu yaz, hazır `.pptx` faylını yüklə. Fayl PowerPoint-də tam redaktə olunur.")
 
@@ -193,13 +239,10 @@ with sol:
     else:
         alt = kat["altlar"][0]
     variants = alt["variantlar"]
-    if len(variants) > 1:
-        v = st.pills("Düzülüş", variants, key=f"var_{kat['id']}_{alt['tip']}", selection_mode="single", wrap=True, default=variants[0],
-                     format_func=lambda x, t=alt["tip"]: kataloq.variant_ad(t, x)) or variants[0]
-    else:
-        v = variants[0]
+    v = variants[0]
     img(os.path.join(ROOT, "assets", "variant", f"{alt['tip']}_{v}.png"))
-    st.caption("Nümunə görünüş. Rəng seçdiyin temaya görə dəyişəcək.")
+    st.caption("Nümunə görünüş. Rəng seçdiyin temaya görə dəyişəcək." +
+               (" Düzülüşü slayd əlavə olunandan sonra slaydın içində dəyişə bilərsən." if len(variants) > 1 else ""))
     st.button("➕ Slayd əlavə et", type="primary", on_click=cb_elave, args=(kat["id"], alt["tip"], v), use_container_width=True)
 
 # ------------------------------------------------------------------ 3. slaydlar
@@ -213,19 +256,26 @@ with sag:
         ad_k = manual.kat_tap(rec["kat"])["ad"]
         nun = manual.numunedir(rec)
         baslik = f"{i + 1}. {ad_k} — {kataloq.variant_ad(rec['tip'], rec['variant'])}" + ("   ⚠ nümunə mətn" if nun else "")
-        with st.expander(baslik, expanded=(sid == st.session_state.acik)):
-            c1, c2, c3, c4 = st.columns([1, 1, 1, 4])
+        acik = sid in st.session_state.acik_set
+        with st.container(border=True):
+            st.button(f"{'▾' if acik else '▸'} {baslik}", key=f"hdr{sid}", on_click=cb_toggle, args=(sid,), use_container_width=True)
+            if not acik:
+                continue
+            c1, c2, c3, _ = st.columns([1, 1, 1, 4])
             c1.button("↑", key=f"up{sid}", on_click=cb_yuxari, args=(sid,), help="Yuxarı")
             c2.button("↓", key=f"dn{sid}", on_click=cb_asagi, args=(sid,), help="Aşağı")
             c3.button("🗑", key=f"del{sid}", on_click=cb_sil, args=(sid,), help="Sil")
             if len(alt_r["variantlar"]) > 1:
-                rec["variant"] = c4.selectbox("Düzülüş", alt_r["variantlar"], key=f"var{sid}",
-                                              index=alt_r["variantlar"].index(rec["variant"]),
-                                              format_func=lambda x, t=rec["tip"]: kataloq.variant_ad(t, x))
+                st.pills("Düzülüş", alt_r["variantlar"], key=f"var{sid}", selection_mode="single", wrap=True,
+                         default=rec["variant"], on_change=cb_variant, args=(sid,),
+                         format_func=lambda x, t=rec["tip"]: kataloq.variant_ad(t, x))
+            img(os.path.join(ROOT, "assets", "variant", f"{rec['tip']}_{rec['variant']}.png"), width=300)
             d = rec["data"]
             for f in alt_r["sahələr"]:
                 ad, key, nv = f["ad"], f"{sid}:{f['ad']}", f["növ"]
-                if nv == "str":
+                if nv == "str" and f.get("çoxsətir"):
+                    d[ad] = st.text_area(f"{lbl(f)}  (hər sətir ≤{f['max']})", d.get(ad, ""), key=key, height=90)
+                elif nv == "str":
                     d[ad] = st.text_input(f"{lbl(f)}  (≤{f['max']})", d.get(ad, ""), key=key)
                 elif nv == "sətirlər":
                     if ad == "kateqoriyalar":      # qrafik widget-ində idarə olunur
@@ -281,13 +331,26 @@ if n_nun:
     st.warning(f"{n_nun} slaydda nümunə mətn dəyişdirilməyib. Faylı yaratmazdan əvvəl onları yenilə.")
 
 ok_onizle, sebeb = onizleme.mumkundur()
+
+if st.query_params.get("diaq"):          # yalnız linkin sonuna ?diaq=1 yazanda görünür (texniki yoxlama)
+    import platform, shutil
+    with st.expander("🔧 Diaqnostika (önizləmə)", expanded=True):
+        st.write({"önizləmə mümkündür": ok_onizle, "səbəb": sebeb, "soffice_yolu()": onizleme.soffice_yolu(),
+                  "which soffice": shutil.which("soffice"), "which libreoffice": shutil.which("libreoffice"),
+                  "python": platform.python_version(), "sistem": platform.platform()})
+        try:
+            import pymupdf
+            st.write("pymupdf:", pymupdf.__version__)
+        except Exception as _e:
+            st.write("pymupdf xətası:", repr(_e))
+        st.write({y: os.path.exists(y) for y in ("/usr/bin/soffice", "/usr/bin/libreoffice", "/usr/lib/libreoffice/program/soffice")})
 if st.button("📥 Hazırla və önizlə", type="primary", disabled=not S):
     with st.spinner("Təqdimat hazırlanır..."):
         b, rep, warn = manual.pptx_bytes(spec)
         png, png_xeta = None, ""
         if ok_onizle:
             try:
-                png = onizleme.pptx_png(b)
+                png = onizleme.pptx_png(b, dpi=100)
             except onizleme.OnizlemeXetasi as e:
                 png_xeta = str(e)
     st.session_state.cixis = {"b": b, "rep": rep, "warn": warn, "h": h, "n": len(S), "png": png, "png_xeta": png_xeta,
@@ -313,11 +376,18 @@ if cx:
         st.caption("! " + w)
     if cx["png"]:
         st.subheader("👁 Önizləmə")
-        st.caption("Önizləmə LibreOffice ilə çəkilir. PowerPoint-də şriftlər və aralıqlar bir qədər fərqli ola bilər. Böyütmək üçün şəklin üstünə gəl.")
+        st.caption("Önizləmə LibreOffice ilə çəkilir. PowerPoint-də şriftlər və aralıqlar bir qədər fərqli ola bilər. "
+                   "Böyütmək üçün şəklin altındakı «🔍 Böyüt» düyməsinə bas.")
+        _ac = None
         for r0 in range(0, len(cx["png"]), 3):
             cols = st.columns(3)
             for c, j in zip(cols, range(r0, min(r0 + 3, len(cx["png"])))):
                 c.image(cx["png"][j], caption=cx["adlar"][j] if j < len(cx["adlar"]) else None)
+                if c.button("🔍 Böyüt", key=f"boyut{j}", use_container_width=True):
+                    _ac = j
+        if _ac is not None:
+            st.session_state.dlg_i = _ac
+            boyut()
     elif ok_onizle and cx["png_xeta"]:
         st.warning(f"Önizləmə alınmadı ({cx['png_xeta']}). Fayl isə hazırdır, yükləyə bilərsən.")
     elif not ok_onizle:
